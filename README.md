@@ -73,4 +73,4 @@ To build the project in WebGL, there are two profiles:
 - **Default WebGL**: Builds the development build.
 - **Release**: Builds the release build.
 
->**Note**: id the project is built for the hdt webapp, build the prject in the folder 'hdt_unity_visualizer'.
+>**Note**: If the project is built for the hdt webapp, build the project in the folder 'hdt_unity_visualizer'.
