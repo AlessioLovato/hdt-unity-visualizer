@@ -187,6 +187,10 @@ public class JointsStateSubscriber_SMPL : MonoBehaviour
                         fe_ += sh_fe_off;
                         abd_ += sh_adb_off;
                         ier_ += sh_ier_off;
+                    } else if (joint_name_ == "wrist") { //switch fe and abd for wrist
+                        float tmp = -fe_;
+                        fe_ = abd_;
+                        abd_ = tmp;
                     }
 
                     switch (side_)
