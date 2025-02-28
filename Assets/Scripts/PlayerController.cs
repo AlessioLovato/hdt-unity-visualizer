@@ -12,6 +12,8 @@ public class PlayerController : MonoBehaviour
     public float zLimitBackwards = 0.3f;
     public float xPanLimit = 0.8f;
     public float yPanLimit = 1.0f;
+
+    public float yOrigin = 0.0f; // y position of the player at the start of the game
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -114,12 +116,12 @@ public class PlayerController : MonoBehaviour
             float horizontalInput = Input.GetAxis("Mouse X") * panMovementSpeed;
 
             // Pan the player
-            // Check i the movement goes out the pan limits to prevent the player to exit the frame
-            if (xPanLimit > Math.Abs(transform.position.x + horizontalInput))
+            // Check if the movement goes out the pan limits to prevent the player to exit the frame
+            if (transform.position.x + horizontalInput < xPanLimit && transform.position.x + horizontalInput > -xPanLimit)
             {
                 transform.Translate(Vector3.right * horizontalInput, Space.World);
             }
-            if (yPanLimit > Math.Abs(transform.position.y + verticalInput))
+            if (transform.position.y + verticalInput < yOrigin + yPanLimit && transform.position.y + verticalInput > yOrigin - yPanLimit)
             {
                 transform.Translate(Vector3.up * verticalInput, Space.World);
             }

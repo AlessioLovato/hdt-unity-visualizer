@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 
 // Used to import functions from the js library
 using System.Runtime.InteropServices;
+using System;
 
 public class JointsStateSubscriber : MonoBehaviour
 {
@@ -30,16 +31,22 @@ public class JointsStateSubscriber : MonoBehaviour
     private Dictionary<HumanBodyBones, Quaternion> body_mecanim_n_pose_global2local_ = new Dictionary<HumanBodyBones, Quaternion>();
     private Dictionary<HumanBodyBones, Quaternion> body_mecanim_n_pose_local_ = new Dictionary<HumanBodyBones, Quaternion>();
 
+    // WebSocket connection
     private WebSocket ws;
+    private bool connected = false; // Flag to check if the player is connected to the websocket server
+    public string ws_url = "ws://localhost:9090"; // The URL of the rosbridge server
+    public string joint_topic = "/suit0/joints_state"; // The topic to subscribe to
 
     #if !UNITY_EDITOR
         // Import functions from the js library
         [DllImport("__Internal")]
         private static extern string getWsUrl();
+        [DllImport("__Internal")]
+        private static extern string getTopic();
     #endif
 
     // Start is called before the first frame update
-    async void Start()
+    void Start()
     {
         animator_ = GetComponent<Animator>();
 
@@ -50,16 +57,37 @@ public class JointsStateSubscriber : MonoBehaviour
         mapMecanimNpose();
         transform.rotation = initial_rotation;
 
+        // Connect to the websocket server
+        StartCoroutine(ConnectToWebSocket());
+    }
+
+    private IEnumerator ConnectToWebSocket()
+    {
+        while (true)
+        {
+            if (!connected)
+            {
+                Debug.Log("Attempting to connect to WebSocket...");
+                CreateROSConnection();
+            }
+            yield return new WaitForSeconds(3); // Wait for 3 seconds before trying again
+        }
+    }
+
+    private async void CreateROSConnection()
+    {
         // Initialize the WebSocket connection to the rosbridge server
         #if UNITY_EDITOR
-            ws = new WebSocket("ws://localhost:9090");
+            ws = new WebSocket(ws_url);
         #else
             ws = new WebSocket(getWsUrl());
+            joint_topic = getTopic();
         #endif
 
         ws.OnOpen += () =>
         {
             Debug.Log("WebSocket connection open!");
+            connected = true;
             SubscribeToJointStates();
         };
 
@@ -71,6 +99,7 @@ public class JointsStateSubscriber : MonoBehaviour
         ws.OnClose += (e) =>
         {
             Debug.Log("WebSocket connection closed!");
+            connected = false;
         };
 
         ws.OnMessage += (bytes) =>
@@ -95,7 +124,7 @@ public class JointsStateSubscriber : MonoBehaviour
         // Subscribe to the /joint_states topic
         JObject subscribeMessage = new JObject();
         subscribeMessage["op"] = "subscribe";
-        subscribeMessage["topic"] = "/suit0/joints_state";
+        subscribeMessage["topic"] = joint_topic;
         ws.SendText(subscribeMessage.ToString());
     }
 
@@ -105,7 +134,7 @@ public class JointsStateSubscriber : MonoBehaviour
         {
             // Parse the received message
             JObject message = JObject.Parse(messageData);
-            if ((string)message["topic"] == "/suit0/joints_state")
+            if ((string)message["topic"] == joint_topic)
             {
                 JArray positions = (JArray)message["msg"]["position"];
                 JArray names = (JArray)message["msg"]["name"];
@@ -148,12 +177,9 @@ public class JointsStateSubscriber : MonoBehaviour
 
     void Update()
     {
-        if (ws != null)
-        {
-            #if !UNITY_WEBGL || UNITY_EDITOR
-                ws.DispatchMessageQueue();
-            #endif
-        }
+        #if !UNITY_WEBGL || UNITY_EDITOR
+            ws?.DispatchMessageQueue();
+        #endif
 
         foreach (var key in body_mecanim_bones_.Keys)
         {
